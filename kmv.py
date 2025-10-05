@@ -22,7 +22,7 @@ st.sidebar.header("Input Parameters")
 E = st.sidebar.number_input("Market Value of Equity (E)", value=1.0e8, step=1.0e7, format="%.2e")
 D = st.sidebar.number_input("Book Value of Debt (D)", value=9.0e7, step=1.0e7, format="%.2e")
 sigma_E = st.sidebar.number_input("Equity Volatility (σE)", value=0.6, step=0.01, format="%.2f")
-r = st.sidebar.number_input("Risk-Free Rate (r)", value=0.03, step=0.01, format="%.2f")
+r = st.sidebar.number_input("Company Growth Rate/risk-free (r)", value=0.03, step=0.01, format="%.2f")
 T = st.sidebar.number_input("Time Horizon (T, years)", value=1.0, step=0.1, format="%.2f")
 
 # Climate shock parameters
