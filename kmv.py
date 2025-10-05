@@ -3,55 +3,76 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import norm, t
 
-# -----------------------------
+# ----------------------------------------
 # Streamlit App Configuration
-# -----------------------------
+# ----------------------------------------
 st.title("📉 KMV Company Default Probability Calculator with Climate Adjustment")
 
 st.markdown("""
 This app calculates a company's **default probability** using the **KMV structural model** 
 and provides three estimates:
 1. **Standard KMV Normal Model**
-2. **Climate-Risk Adjusted (Student-t) Model**
+2. **Climate-Risk Adjusted Model (Student-t or Mixture Shock)**
 3. **Moody’s KMV Empirical EDF Estimate**
 """)
 
-# -----------------------------
+# ----------------------------------------
 # User Inputs with Defaults
-# -----------------------------
+# ----------------------------------------
 st.sidebar.header("Input Parameters")
 
 E = st.sidebar.number_input("Market Value of Equity (E)", value=1e9, step=1e8, format="%.2e")
 D = st.sidebar.number_input("Book Value of Debt (D)", value=8e8, step=1e8, format="%.2e")
-sigma_E = st.sidebar.number_input("Equity Volatility (σE)", value=0.30)
+sigma_E = st.sidebar.number_input("Equity Volatility (σE)", value=0.44)
 r = st.sidebar.number_input("Risk-Free Rate (r)", value=0.03)
 T = st.sidebar.number_input("Time Horizon (T, years)", value=1.0)
-climate_risk = st.sidebar.slider("Climate Risk Factor (0 = none, 1 = high impact)", 0.0, 1.0, 0.3)
 
-# -----------------------------
-# KMV Core Calculations
-# -----------------------------
-# Approximate asset value (iterative refinement skipped for simplicity)
-V = E + D
+# ----------------------------------------
+# Climate Risk Section
+# ----------------------------------------
+st.markdown("### 🌍 Climate Risk Parameters")
+
+col3, col4 = st.columns(2)
+with col3:
+    use_t = st.checkbox("Use Student-t heavy-tail adjustment", value=True)
+    nu = st.slider("Degrees of freedom (ν) for Student-t (lower ⇒ heavier tails)", 3, 50, 6)
+with col4:
+    use_mixture = st.checkbox("Use discrete climate-shock mixture", value=True)
+    p_shock = st.slider("Probability of climate shock (p)", 0.0, 0.5, 0.05, 0.01)
+    shock_frac = st.slider("Shock severity (fractional drop in assets) s", 0.0, 0.9, 0.25, 0.01)
+
+# ----------------------------------------
+# Core KMV Calculations
+# ----------------------------------------
+V = E + D  # Approximate asset value
 sigma_A = sigma_E * E / (E + D)
-DD = (np.log(V / D) + (r - 0.5 * sigma_A ** 2) * T) / (sigma_A * np.sqrt(T))
+DD = (np.log(V / D) + (r - 0.5 * sigma_A**2) * T) / (sigma_A * np.sqrt(T))
 
-# 1️⃣ Standard KMV Default Probability
+# 1️⃣ Standard KMV Probability
 PD_normal = norm.cdf(-DD)
 
-# 2️⃣ Climate-Risk Adjusted (t-distribution)
-df = 3 + 10 * (1 - climate_risk)
-PD_climate = t.cdf(-DD, df=df)
+# 2️⃣ Climate-Adjusted Probability
+PD_climate = PD_normal  # start with base
 
-# 3️⃣ Moody’s KMV Empirical EDF (logistic approximation)
+# Student-t adjustment
+if use_t:
+    PD_t = t.cdf(-DD, df=nu)
+    PD_climate = PD_t
+
+# Discrete climate-shock mixture
+if use_mixture:
+    PD_shock = norm.cdf(-(DD - np.log(1 - shock_frac)) / 1)
+    PD_climate = (1 - p_shock) * PD_climate + p_shock * PD_shock
+
+# 3️⃣ Empirical EDF Approximation
 def empirical_edf(dd):
-    return 1 / (1 + np.exp(2.0 * dd)) * 0.5  # scaled to mimic observed defaults
+    return 1 / (1 + np.exp(2.0 * dd)) * 0.5
 
 PD_empirical = empirical_edf(DD)
 
-# -----------------------------
+# ----------------------------------------
 # Display Results
-# -----------------------------
+# ----------------------------------------
 st.subheader("🧮 Default Probability Results")
 col1, col2, col3 = st.columns(3)
 col1.metric("KMV Normal PD", f"{PD_normal * 100:.4f}%")
@@ -62,18 +83,22 @@ st.write(f"**Estimated Asset Value (V):** {V:,.0f}")
 st.write(f"**Estimated Asset Volatility (σA):** {sigma_A:.4f}")
 st.write(f"**Distance to Default (DD):** {DD:.4f}")
 
-# -----------------------------
+# ----------------------------------------
 # Plot Comparison
-# -----------------------------
+# ----------------------------------------
 x = np.linspace(-4, 6, 500)
-normal_pdf = norm.pdf(x)
-t_pdf = t.pdf(x, df=df)
+normal_cdf = norm.cdf(-x)
+t_cdf = t.cdf(-x, df=nu)
 empirical_curve = [empirical_edf(i) for i in x]
 
 fig, ax = plt.subplots(figsize=(10, 5))
-ax.plot(x, norm.cdf(-x), label="KMV Normal Model")
-ax.plot(x, t.cdf(-x, df=df), label=f"Climate-Adjusted (t, df={df:.1f})")
-ax.plot(x, empirical_curve, label="KMV Empirical EDF", linestyle="--", color="orange")
+ax.plot(x, normal_cdf, label="KMV Normal Model")
+if use_t:
+    ax.plot(x, t_cdf, label=f"Student-t (df={nu}) Climate Model")
+if use_mixture:
+    shock_cdf = (1 - p_shock) * normal_cdf + p_shock * norm.cdf(-(x - np.log(1 - shock_frac)))
+    ax.plot(x, shock_cdf, "--", label=f"Mixture Shock Model (p={p_shock}, s={shock_frac})")
+ax.plot(x, empirical_curve, "--", color="orange", label="KMV Empirical EDF")
 ax.axvline(DD, color="red", linestyle=":", label=f"DD = {DD:.2f}")
 ax.set_title("Comparison of Default Probability Models")
 ax.set_xlabel("Distance to Default (DD)")
@@ -81,9 +106,9 @@ ax.set_ylabel("Probability of Default")
 ax.legend()
 st.pyplot(fig)
 
-# -----------------------------
+# ----------------------------------------
 # Notes / Formulas
-# -----------------------------
+# ----------------------------------------
 st.markdown("""
 ### 📘 KMV Model Formulas
 
@@ -107,10 +132,9 @@ st.markdown("""
    PD_{normal} = N(-DD)
    \\]
 
-5. **Climate-Adjusted (t-Distribution)**
-   \\[
-   PD_{climate} = T_{df}(-DD)
-   \\]
+5. **Climate-Adjusted**
+   - **Student-t**: \\( PD_t = T_{\\nu}(-DD) \\)
+   - **Mixture Model**: \\( PD_{mix} = (1 - p)PD + p N(-(DD - \\ln(1-s))) \\)
 
 6. **KMV Empirical EDF**
    \\[
