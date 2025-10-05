@@ -20,7 +20,6 @@ and shows two estimates:
 # ----------------------------------------
 st.sidebar.header("Input Parameters")
 
-# Reduced asset buffer for more visible climate effect
 E = st.sidebar.number_input("Market Value of Equity (E)", value=8.5e8, step=1e7, format="%.2e")
 D = st.sidebar.number_input("Book Value of Debt (D)", value=1e9, step=1e7, format="%.2e")
 sigma_E = st.sidebar.number_input("Equity Volatility (σE)", value=0.44, step=0.01, format="%.2f")
@@ -32,7 +31,6 @@ T = st.sidebar.number_input("Time Horizon (T, years)", value=1.0, step=0.1, form
 # ----------------------------------------
 st.markdown("### 🌍 Climate Risk Parameters")
 
-# Higher probability and shock for visual separation
 p_shock = st.slider("Probability of climate shock (p)", 0.0, 0.5, 0.2, 0.01)
 shock_frac = st.slider("Shock severity (fractional drop in assets) s", 0.0, 0.9, 0.5, 0.01)
 
@@ -66,24 +64,29 @@ st.write(f"**Shock-Adjusted Distance to Default (DD_shock):** {DD_shock_scaled:.
 st.write(f"**Shock-Adjusted Volatility (σA_shock):** {sigma_A_shock:.4f}")
 
 # ----------------------------------------
-# Plot CDFs
+# Corrected Plot CDFs
 # ----------------------------------------
 x_min = min(DD, DD_shock_scaled) - 4
 x_max = max(DD, DD_shock_scaled) + 4
 x = np.linspace(x_min, x_max, 500)
 
+# Correct CDFs
 normal_cdf = norm.cdf(-x)
-shock_cdf = (1 - p_shock) * norm.cdf(-x) + p_shock * norm.cdf(- (x + np.log(1 - shock_frac)))
+shock_cdf = (1 - p_shock) * norm.cdf(-x) + p_shock * norm.cdf(-DD_shock_scaled)
 
 fig, ax = plt.subplots(figsize=(10, 5))
 ax.plot(x, normal_cdf, label="KMV Normal CDF")
-ax.plot(x, shock_cdf, "--", label=f"Normal + Climate Shock CDF")
+ax.plot(x, shock_cdf, "--", label=f"Normal + Climate Shock CDF (p={p_shock}, s={shock_frac})")
+
+# Correct vertical lines
 ax.axvline(DD, color="red", linestyle=":", label=f"DD = {DD:.2f}")
 ax.axvline(DD_shock_scaled, color="purple", linestyle=":", label=f"DD_shock = {DD_shock_scaled:.2f}")
+
 ax.set_title("Comparison of KMV Default Probability Models (CDF)")
 ax.set_xlabel("Distance to Default (DD)")
 ax.set_ylabel("Probability of Default")
 ax.legend()
+ax.grid(True)
 st.pyplot(fig)
 
 # ----------------------------------------
@@ -126,6 +129,8 @@ with st.expander("📘 Formulas & Explanation"):
      PD_{mix} = (1 - p) N(-DD) + p N(-DD_{shock})
      \\]
 """)
+
+
 
 
 
