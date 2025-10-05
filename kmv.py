@@ -20,10 +20,10 @@ st.header("Firm / Market Inputs")
 col1, col2 = st.columns(2)
 with col1:
     equity_value = st.number_input("Market Value of Equity (E)", value=100.0, min_value=0.01, step=1.0, format="%.2f")
-    equity_vol = st.number_input("Equity Volatility (σ_E)", value=0.30, min_value=0.01, step=0.01, format="%.2f")
+    equity_vol = st.number_input("Equity Volatility (σ_E)", value=0.44, min_value=0.01, step=0.01, format="%.2f")
     risk_free_rate = st.number_input("Risk-free Rate (r)", value=0.05, min_value=0.0, step=0.005, format="%.3f")
 with col2:
-    debt_value = st.number_input("Book Value of Debt (D)", value=80.0, min_value=0.01, step=1.0, format="%.2f")
+    debt_value = st.number_input("Book Value of Debt (D)", value=85.0, min_value=0.01, step=1.0, format="%.2f")
     time_horizon = st.number_input("Time Horizon (T, years)", value=1.0, min_value=0.01, step=0.1, format="%.2f")
     tol = st.number_input("Solver Tolerance", value=1e-5, format="%.0e")
 
