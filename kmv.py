@@ -21,11 +21,11 @@ and provides three estimates:
 # ----------------------------------------
 st.sidebar.header("Input Parameters")
 
-E = st.sidebar.number_input("Market Value of Equity (E)", value=100, step=1e8, format="%.2e")
-D = st.sidebar.number_input("Book Value of Debt (D)", value=80, step=1e8, format="%.2e")
-sigma_E = st.sidebar.number_input("Equity Volatility (σE)", value=0.40)
-r = st.sidebar.number_input("Risk-Free Rate (r)", value=0.03)
-T = st.sidebar.number_input("Time Horizon (T, years)", value=1.0)
+E = st.sidebar.number_input("Market Value of Equity (E)", value=1e9, step=1e8, format="%.2e")
+D = st.sidebar.number_input("Book Value of Debt (D)", value=8e8, step=1e8, format="%.2e")
+sigma_E = st.sidebar.number_input("Equity Volatility (σE)", value=0.44, step=0.01, format="%.2f")
+r = st.sidebar.number_input("Risk-Free Rate (r)", value=0.03, step=0.01, format="%.2f")
+T = st.sidebar.number_input("Time Horizon (T, years)", value=1.0, step=0.1, format="%.2f")
 
 # ----------------------------------------
 # Climate Risk Parameters
@@ -46,7 +46,6 @@ DD = (np.log(V / D) + (r - 0.5 * sigma_A**2) * T) / (sigma_A * np.sqrt(T))
 PD_normal = norm.cdf(-DD)
 
 # 2️⃣ Climate Shock Mixture Adjustment + volatility scaling
-DD_shock = DD + np.log(1 - shock_frac)
 sigma_A_shock = np.sqrt(sigma_A**2 + shock_frac**2)  # scaled volatility
 DD_shock_scaled = (np.log(V / D) + (r - 0.5 * sigma_A_shock**2) * T) / (sigma_A_shock * np.sqrt(T))
 PD_shock = norm.cdf(-DD_shock_scaled)
@@ -71,9 +70,9 @@ PD_empirical = empirical_edf_logistic(DD)
 # ----------------------------------------
 st.subheader("🧮 Default Probability Results")
 col1, col2, col3 = st.columns(3)
-col1.metric("KMV Normal PD", f"{PD_normal * 100:.4f}%")
-col2.metric("Climate-Adjusted PD", f"{PD_climate * 100:.4f}%")
-col3.metric("KMV Empirical EDF", f"{PD_empirical * 100:.4f}%")
+col1.metric("KMV Normal PD", f"{PD_normal * 100:.6f}%")
+col2.metric("Climate-Adjusted PD", f"{PD_climate * 100:.6f}%")
+col3.metric("KMV Empirical EDF", f"{PD_empirical * 100:.6f}%")
 
 st.write(f"**Estimated Asset Value (V):** {V:,.0f}")
 st.write(f"**Estimated Asset Volatility (σA):** {sigma_A:.4f}")
@@ -142,6 +141,9 @@ st.markdown("""
    PD_{empirical} = \\frac{1}{1 + e^{-(a DD + b)}}
    \\]
 """)
+
+
+
 
 
 
