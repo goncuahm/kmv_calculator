@@ -20,8 +20,9 @@ and shows two estimates:
 # ----------------------------------------
 st.sidebar.header("Input Parameters")
 
-E = st.sidebar.number_input("Market Value of Equity (E)", value=1e9, step=1e8, format="%.2e")
-D = st.sidebar.number_input("Book Value of Debt (D)", value=8e8, step=1e8, format="%.2e")
+# Reduced asset buffer for more visible climate effect
+E = st.sidebar.number_input("Market Value of Equity (E)", value=8.5e8, step=1e7, format="%.2e")
+D = st.sidebar.number_input("Book Value of Debt (D)", value=1e9, step=1e7, format="%.2e")
 sigma_E = st.sidebar.number_input("Equity Volatility (σE)", value=0.44, step=0.01, format="%.2f")
 r = st.sidebar.number_input("Risk-Free Rate (r)", value=0.03, step=0.01, format="%.2f")
 T = st.sidebar.number_input("Time Horizon (T, years)", value=1.0, step=0.1, format="%.2f")
@@ -31,8 +32,9 @@ T = st.sidebar.number_input("Time Horizon (T, years)", value=1.0, step=0.1, form
 # ----------------------------------------
 st.markdown("### 🌍 Climate Risk Parameters")
 
-p_shock = st.slider("Probability of climate shock (p)", 0.0, 0.5, 0.05, 0.01)
-shock_frac = st.slider("Shock severity (fractional drop in assets) s", 0.0, 0.9, 0.25, 0.01)
+# Higher probability and shock for visual separation
+p_shock = st.slider("Probability of climate shock (p)", 0.0, 0.5, 0.2, 0.01)
+shock_frac = st.slider("Shock severity (fractional drop in assets) s", 0.0, 0.9, 0.5, 0.01)
 
 # ----------------------------------------
 # Core KMV Calculations
@@ -66,8 +68,8 @@ st.write(f"**Shock-Adjusted Volatility (σA_shock):** {sigma_A_shock:.4f}")
 # ----------------------------------------
 # Plot CDFs
 # ----------------------------------------
-x_min = DD - 4
-x_max = DD + 4
+x_min = min(DD, DD_shock_scaled) - 4
+x_max = max(DD, DD_shock_scaled) + 4
 x = np.linspace(x_min, x_max, 500)
 
 normal_cdf = norm.cdf(-x)
