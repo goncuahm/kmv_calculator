@@ -32,7 +32,7 @@ col3, col4 = st.columns(2)
 with col3:
     # Student-t params
     use_t = st.checkbox("Use Student-t climate heavy-tail adjustment", value=True)
-    nu = st.slider("Degrees of freedom (ν) for Student-t (lower => heavier tails)", 3, 50, 6)
+    nu = st.slider("Degrees of freedom (ν) for Student-t (lower => heavier tails)", 2, 50, 6)
 with col4:
     # mixture shock params
     use_mixture = st.checkbox("Use discrete climate shock mixture model", value=True)
