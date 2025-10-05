@@ -56,8 +56,8 @@ PD_climate = (1 - p_shock) * PD_normal + p_shock * norm.cdf(-DD_shock)
 # ----------------------------------------
 st.subheader("🧮 Default Probability Results")
 col1, col2 = st.columns(2)
-col1.metric("KMV Normal PD", f"{PD_normal*100:.3f}%")
-col2.metric("Climate-Adjusted PD", f"{PD_climate*100:.3f}%")
+col1.metric("KMV Normal PD", f"{PD_normal*100:.2f}%")
+col2.metric("Climate-Adjusted PD", f"{PD_climate*100:.2f}%")
 
 st.write(f"**Estimated Asset Value (V):** {V:,.0f}")
 st.write(f"**Estimated Asset Volatility (σA):** {sigma_A:.4f}")
