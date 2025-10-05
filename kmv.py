@@ -51,19 +51,22 @@ DD_shock_scaled = (np.log(V / D) + (r - 0.5 * sigma_A_shock**2) * T) / (sigma_A_
 PD_shock = norm.cdf(-DD_shock_scaled)
 PD_climate = (1 - p_shock) * PD_normal + p_shock * PD_shock
 
-# 3️⃣ Empirical EDF Logistic Approximation
-def empirical_edf_logistic(DD, dd_points=[-8,-4,-2,0,2,4,8], edf_points=[0.999999,0.99,0.9,0.5,0.1,0.01,1e-6], eps=1e-9):
+# 3️⃣ KMV Empirical EDF (Previous method with extreme DD enforcement)
+def empirical_edf(dd):
     """
-    Fit logistic curve to empirical control points to ensure EDF -> 1 on left tail
+    Simple KMV empirical EDF with extreme DD enforcement:
+    - If DD < -20, PD = 1
+    - If DD > 20, PD = 0
+    - Otherwise, use previous sigmoid-like approximation
     """
-    edf_clamped = np.clip(edf_points, eps, 1 - eps)
-    logit_y = np.log(edf_clamped / (1 - edf_clamped))
-    a, b = np.polyfit(dd_points, logit_y, 1)
-    logit_at_DD = a * DD + b
-    edf_at_DD = 1.0 / (1.0 + np.exp(-logit_at_DD))
-    return float(np.clip(edf_at_DD, eps, 1.0 - eps))
+    if dd <= -20:
+        return 1.0
+    elif dd >= 20:
+        return 0.0
+    else:
+        return 1 / (1 + np.exp(2.0 * dd)) * 0.5
 
-PD_empirical = empirical_edf_logistic(DD)
+PD_empirical = empirical_edf(DD)
 
 # ----------------------------------------
 # Display Results
@@ -86,12 +89,12 @@ st.write(f"**Shock-Adjusted Volatility (σA_shock):** {sigma_A_shock:.4f}")
 x = np.linspace(-4, 6, 500)
 normal_cdf = norm.cdf(-x)
 shock_cdf = (1 - p_shock) * normal_cdf + p_shock * norm.cdf(-(x + np.log(1 - shock_frac)))
-empirical_curve = [empirical_edf_logistic(i) for i in x]
+empirical_curve = [empirical_edf(i) for i in x]
 
 fig, ax = plt.subplots(figsize=(10, 5))
 ax.plot(x, normal_cdf, label="KMV Normal Model")
 ax.plot(x, shock_cdf, "--", label=f"Mixture Shock Model (p={p_shock}, s={shock_frac})")
-ax.plot(x, empirical_curve, "--", color="orange", label="KMV Empirical EDF (logistic)")
+ax.plot(x, empirical_curve, "--", color="orange", label="KMV Empirical EDF")
 ax.axvline(DD, color="red", linestyle=":", label=f"DD = {DD:.2f}")
 ax.set_title("Comparison of Default Probability Models")
 ax.set_xlabel("Distance to Default (DD)")
@@ -136,12 +139,16 @@ st.markdown("""
    PD_{mix} = (1 - p) N(-DD) + p N(-DD_{shock})
    \\]
 
-6. **KMV Empirical EDF (Logistic)**
+6. **KMV Empirical EDF (with extreme DD enforcement)**
    \\[
-   PD_{empirical} = \\frac{1}{1 + e^{-(a DD + b)}}
+   PD_{empirical} =
+   \\begin{cases}
+   1 & \\text{if } DD \\leq -20 \\\\
+   0 & \\text{if } DD \\geq 20 \\\\
+   \\frac{1}{1 + e^{2 DD}} \\times 0.5 & \\text{otherwise}
+   \\end{cases}
    \\]
 """)
-
 
 
 
