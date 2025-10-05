@@ -10,7 +10,7 @@ st.title("📉 KMV Default Probability Calculator with Climate Shock Adjustment"
 
 st.markdown("""
 This app calculates a company's **default probability** using the **KMV structural model** (Normal)
-and includes a **Climate-Risk Adjusted Normal KMV PD** (numeric only, visualized as horizontal line).
+and includes a **Climate-Risk Adjusted Normal KMV PD**.
 """)
 
 # ----------------------------------------
@@ -18,10 +18,10 @@ and includes a **Climate-Risk Adjusted Normal KMV PD** (numeric only, visualized
 # ----------------------------------------
 st.sidebar.header("Input Parameters")
 
-# Default values set to produce KMV PD ~ 4–5%
-E = st.sidebar.number_input("Market Value of Equity (E)", value=1e8, step=1e7, format="%.2e")
-D = st.sidebar.number_input("Book Value of Debt (D)", value=8.5e7, step=1e7, format="%.2e")
-sigma_E = st.sidebar.number_input("Equity Volatility (σE)", value=0.44, step=0.01, format="%.2f")
+# Default inputs chosen to yield PD ~4–5%
+E = st.sidebar.number_input("Market Value of Equity (E)", value=1.0e8, step=1.0e7, format="%.2e")
+D = st.sidebar.number_input("Book Value of Debt (D)", value=9.0e7, step=1.0e7, format="%.2e")
+sigma_E = st.sidebar.number_input("Equity Volatility (σE)", value=0.6, step=0.01, format="%.2f")
 r = st.sidebar.number_input("Risk-Free Rate (r)", value=0.03, step=0.01, format="%.2f")
 T = st.sidebar.number_input("Time Horizon (T, years)", value=1.0, step=0.1, format="%.2f")
 
@@ -50,8 +50,8 @@ PD_normal_climate = (1 - p_shock) * PD_normal + p_shock * norm.cdf(-DD_shock_sca
 # ----------------------------------------
 st.subheader("🧮 Default Probability Results")
 col1, col2 = st.columns(2)
-col1.metric("KMV Normal PD", f"{PD_normal * 100:.6f}%")
-col2.metric("Climate-Adjusted Normal PD", f"{PD_normal_climate * 100:.6f}%")
+col1.metric("KMV Normal PD", f"{PD_normal * 100:.3f}%")
+col2.metric("Climate-Adjusted Normal PD", f"{PD_normal_climate * 100:.3f}%")
 
 st.write(f"**Estimated Asset Value (V):** {V:,.0f}")
 st.write(f"**Estimated Asset Volatility (σA):** {sigma_A:.4f}")
@@ -60,7 +60,7 @@ st.write(f"**Shock-Adjusted Distance to Default (DD_shock):** {DD_shock_scaled:.
 st.write(f"**Shock-Adjusted Volatility (σA_shock):** {sigma_A_shock:.4f}")
 
 # ----------------------------------------
-# Plot: KMV Normal CDF only (decimal scale)
+# Plot: KMV Normal CDF only
 # ----------------------------------------
 x = np.linspace(DD - 4, DD + 4, 500)
 normal_cdf = norm.cdf(-x)
@@ -70,7 +70,6 @@ ax.plot(x, normal_cdf, label="KMV Normal CDF")
 
 # Vertical line at DD
 ax.axvline(DD, color="red", linestyle=":", label=f"DD = {DD:.2f}")
-
 # Marker at DD for exact PD
 ax.plot(DD, PD_normal, "ro", label=f"PD = {PD_normal*100:.3f}%")
 
