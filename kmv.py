@@ -31,8 +31,8 @@ T = st.sidebar.number_input("Time Horizon (T, years)", value=1.0, step=0.1, form
 # ----------------------------------------
 st.markdown("### 🌍 Climate Risk Parameters")
 
-p_shock = st.slider("Probability of climate shock (p)", 0.0, 0.5, 0.2, 0.01)
-shock_frac = st.slider("Shock severity (fractional drop in assets) s", 0.0, 0.9, 0.5, 0.01)
+p_shock = st.slider("Probability of climate shock (p)", 0.0, 0.5, 0.05, 0.01)      # smaller default
+shock_frac = st.slider("Shock severity (fractional drop in assets) s", 0.0, 0.9, 0.15, 0.01)  # smaller default
 
 # ----------------------------------------
 # Core KMV Calculations
@@ -44,7 +44,7 @@ DD = (np.log(V / D) + (r - 0.5 * sigma_A**2) * T) / (sigma_A * np.sqrt(T))
 # Standard KMV Normal PD
 PD_normal = norm.cdf(-DD)
 
-# Climate-adjusted KMV PD
+# Climate-adjusted KMV PD with volatility scaling
 sigma_A_shock = np.sqrt(sigma_A**2 + shock_frac**2)
 DD_shock_scaled = (np.log(V / D) + (r - 0.5 * sigma_A_shock**2) * T) / (sigma_A_shock * np.sqrt(T))
 PD_normal_climate = (1 - p_shock) * PD_normal + p_shock * norm.cdf(-DD_shock_scaled)
@@ -70,15 +70,18 @@ x_min = min(DD, DD_shock_scaled) - 4
 x_max = max(DD, DD_shock_scaled) + 4
 x = np.linspace(x_min, x_max, 500)
 
-# Correct CDFs
+# Normal CDF
 normal_cdf = norm.cdf(-x)
-shock_cdf = (1 - p_shock) * norm.cdf(-x) + p_shock * norm.cdf(-DD_shock_scaled)
+
+# Correct mixture CDF: x + shift
+shift = DD_shock_scaled - DD
+shock_cdf = (1 - p_shock) * norm.cdf(-x) + p_shock * norm.cdf(-(x + shift))
 
 fig, ax = plt.subplots(figsize=(10, 5))
 ax.plot(x, normal_cdf, label="KMV Normal CDF")
 ax.plot(x, shock_cdf, "--", label=f"Normal + Climate Shock CDF (p={p_shock}, s={shock_frac})")
 
-# Correct vertical lines
+# Vertical lines at DD and DD_shock_scaled
 ax.axvline(DD, color="red", linestyle=":", label=f"DD = {DD:.2f}")
 ax.axvline(DD_shock_scaled, color="purple", linestyle=":", label=f"DD_shock = {DD_shock_scaled:.2f}")
 
@@ -129,6 +132,7 @@ with st.expander("📘 Formulas & Explanation"):
      PD_{mix} = (1 - p) N(-DD) + p N(-DD_{shock})
      \\]
 """)
+
 
 
 
