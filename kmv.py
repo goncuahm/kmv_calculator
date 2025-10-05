@@ -23,7 +23,7 @@ col1, col2 = st.columns(2)
 
 with col1:
     equity_value = st.number_input("Market Value of Equity (E)", min_value=1.0, value=100.0, step=1.0)
-    equity_vol = st.number_input("Equity Volatility (σ_E)", min_value=0.01, value=0.3, step=0.01, format="%.2f")
+    equity_vol = st.number_input("Equity Volatility (σ_E)", min_value=0.01, value=0.44, step=0.01, format="%.2f")
     risk_free_rate = st.number_input("Risk-free Rate (r)", min_value=0.0, value=0.05, step=0.01, format="%.2f")
 
 with col2:
