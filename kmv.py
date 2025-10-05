@@ -1,18 +1,18 @@
 import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.stats import norm, t
+from scipy.stats import norm
 
 # ----------------------------------------
 # Streamlit App Configuration
 # ----------------------------------------
-st.title("📉 KMV Company Default Probability Calculator with Climate Adjustment")
+st.title("📉 KMV Company Default Probability Calculator with Climate Shock Adjustment")
 
 st.markdown("""
 This app calculates a company's **default probability** using the **KMV structural model** 
 and provides three estimates:
 1. **Standard KMV Normal Model**
-2. **Climate-Risk Adjusted Model (Student-t or Mixture Shock)**
+2. **Climate-Risk Adjusted (Mixture Shock Model)**
 3. **Moody’s KMV Empirical EDF Estimate**
 """)
 
@@ -28,18 +28,12 @@ r = st.sidebar.number_input("Risk-Free Rate (r)", value=0.03)
 T = st.sidebar.number_input("Time Horizon (T, years)", value=1.0)
 
 # ----------------------------------------
-# Climate Risk Section
+# Climate Risk Parameters
 # ----------------------------------------
-st.markdown("### 🌍 Climate Risk Parameters")
+st.markdown("### 🌍 Climate Risk Parameters (Mixture Model Only)")
 
-col3, col4 = st.columns(2)
-with col3:
-    use_t = st.checkbox("Use Student-t heavy-tail adjustment", value=True)
-    nu = st.slider("Degrees of freedom (ν) for Student-t (lower ⇒ heavier tails)", 3, 50, 6)
-with col4:
-    use_mixture = st.checkbox("Use discrete climate-shock mixture", value=True)
-    p_shock = st.slider("Probability of climate shock (p)", 0.0, 0.5, 0.05, 0.01)
-    shock_frac = st.slider("Shock severity (fractional drop in assets) s", 0.0, 0.9, 0.25, 0.01)
+p_shock = st.slider("Probability of climate shock (p)", 0.0, 0.5, 0.05, 0.01)
+shock_frac = st.slider("Shock severity (fractional drop in assets) s", 0.0, 0.9, 0.25, 0.01)
 
 # ----------------------------------------
 # Core KMV Calculations
@@ -51,18 +45,10 @@ DD = (np.log(V / D) + (r - 0.5 * sigma_A**2) * T) / (sigma_A * np.sqrt(T))
 # 1️⃣ Standard KMV Probability
 PD_normal = norm.cdf(-DD)
 
-# 2️⃣ Climate-Adjusted Probability
-PD_climate = PD_normal  # start with base
-
-# Student-t adjustment
-if use_t:
-    PD_t = t.cdf(-DD, df=nu)
-    PD_climate = PD_t
-
-# Discrete climate-shock mixture
-if use_mixture:
-    PD_shock = norm.cdf(-(DD - np.log(1 - shock_frac)) / 1)
-    PD_climate = (1 - p_shock) * PD_climate + p_shock * PD_shock
+# 2️⃣ Climate Shock Mixture Adjustment
+DD_shock = DD + np.log(1 - shock_frac)
+PD_shock = norm.cdf(-DD_shock)
+PD_climate = (1 - p_shock) * PD_normal + p_shock * PD_shock
 
 # 3️⃣ Empirical EDF Approximation
 def empirical_edf(dd):
@@ -82,22 +68,19 @@ col3.metric("KMV Empirical EDF", f"{PD_empirical * 100:.4f}%")
 st.write(f"**Estimated Asset Value (V):** {V:,.0f}")
 st.write(f"**Estimated Asset Volatility (σA):** {sigma_A:.4f}")
 st.write(f"**Distance to Default (DD):** {DD:.4f}")
+st.write(f"**Shock-Adjusted Distance to Default (DD_shock):** {DD_shock:.4f}")
 
 # ----------------------------------------
 # Plot Comparison
 # ----------------------------------------
 x = np.linspace(-4, 6, 500)
 normal_cdf = norm.cdf(-x)
-t_cdf = t.cdf(-x, df=nu)
+shock_cdf = (1 - p_shock) * normal_cdf + p_shock * norm.cdf(-(x + np.log(1 - shock_frac)))
 empirical_curve = [empirical_edf(i) for i in x]
 
 fig, ax = plt.subplots(figsize=(10, 5))
 ax.plot(x, normal_cdf, label="KMV Normal Model")
-if use_t:
-    ax.plot(x, t_cdf, label=f"Student-t (df={nu}) Climate Model")
-if use_mixture:
-    shock_cdf = (1 - p_shock) * normal_cdf + p_shock * norm.cdf(-(x - np.log(1 - shock_frac)))
-    ax.plot(x, shock_cdf, "--", label=f"Mixture Shock Model (p={p_shock}, s={shock_frac})")
+ax.plot(x, shock_cdf, "--", label=f"Mixture Shock Model (p={p_shock}, s={shock_frac})")
 ax.plot(x, empirical_curve, "--", color="orange", label="KMV Empirical EDF")
 ax.axvline(DD, color="red", linestyle=":", label=f"DD = {DD:.2f}")
 ax.set_title("Comparison of Default Probability Models")
@@ -132,15 +115,23 @@ st.markdown("""
    PD_{normal} = N(-DD)
    \\]
 
-5. **Climate-Adjusted**
-   - **Student-t**: \\( PD_t = T_{\\nu}(-DD) \\)
-   - **Mixture Model**: \\( PD_{mix} = (1 - p)PD + p N(-(DD - \\ln(1-s))) \\)
+5. **Climate-Adjusted (Mixture Model)**
+   \\[
+   DD_{shock} = DD + \\ln(1 - s)
+   \\]
+   \\[
+   PD_{mix} = (1 - p) N(-DD) + p N(-DD_{shock})
+   \\]
 
 6. **KMV Empirical EDF**
    \\[
    PD_{empirical} = \\frac{1}{1 + e^{2 \\times DD}} \\times 0.5
    \\]
 """)
+
+
+
+
 
 
 
