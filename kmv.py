@@ -39,7 +39,7 @@ DD = (np.log(V / D) + (r - 0.5 * sigma_A**2) * T) / (sigma_A * np.sqrt(T))
 # KMV Normal PD
 PD_normal = norm.cdf(-DD)
 
-# Climate-Adjusted KMV Normal PD
+# Climate-Adjusted KMV Normal PD (numeric only)
 sigma_A_shock = np.sqrt(sigma_A**2 + shock_frac**2)
 DD_shock_scaled = (np.log(V / D) + (r - 0.5 * sigma_A_shock**2) * T) / (sigma_A_shock * np.sqrt(T))
 PD_normal_climate = (1 - p_shock) * PD_normal + p_shock * norm.cdf(-DD_shock_scaled)
@@ -72,8 +72,8 @@ ax.plot(x, normal_cdf, label="KMV Normal CDF")
 # Vertical line at DD
 ax.axvline(DD, color="red", linestyle=":", label=f"DD = {DD:.2f}")
 
-# Marker at DD for exact PD
-ax.plot(DD, PD_normal, "ro", label=f"PD = {PD_normal:.6f}")
+# Marker at DD for exact PD (percentage)
+ax.plot(DD, PD_normal, "ro", label=f"PD = {PD_normal*100:.6f}%")
 
 ax.set_title("KMV Default Probability (Normal Model)")
 ax.set_xlabel("Distance to Default (DD)")
@@ -108,7 +108,7 @@ with st.expander("📘 Formulas & Explanation"):
    PD_{normal} = N(-DD)
    \\]
 
-5. **Climate-Adjusted Normal KMV**
+5. **Climate-Adjusted Normal KMV** (numeric only)
    - Scale volatility for shock:
      \\[
      \\sigma_{A,shock} = \\sqrt{\\sigma_A^2 + s^2}
@@ -122,7 +122,6 @@ with st.expander("📘 Formulas & Explanation"):
      PD_{mix} = (1 - p) N(-DD) + p N(-DD_{shock})
      \\]
 """)
-
 
 
 
