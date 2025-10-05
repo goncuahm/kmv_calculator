@@ -6,10 +6,11 @@ from scipy.stats import norm
 # ----------------------------------------
 # Streamlit App Configuration
 # ----------------------------------------
-st.title("📉 KMV Default Probability Calculator")
+st.title("📉 KMV Default Probability Calculator with Climate Shock Adjustment")
 
 st.markdown("""
-This app calculates a company's **default probability** using the **KMV structural model** (Normal).
+This app calculates a company's **default probability** using the **KMV structural model** (Normal)
+and includes a **Climate-Risk Adjusted Normal KMV PD** (numerically only).
 """)
 
 # ----------------------------------------
@@ -23,6 +24,11 @@ sigma_E = st.sidebar.number_input("Equity Volatility (σE)", value=0.44, step=0.
 r = st.sidebar.number_input("Risk-Free Rate (r)", value=0.03, step=0.01, format="%.2f")
 T = st.sidebar.number_input("Time Horizon (T, years)", value=1.0, step=0.1, format="%.2f")
 
+# Climate risk parameters
+st.sidebar.markdown("### 🌍 Climate Risk Parameters")
+p_shock = st.sidebar.slider("Probability of climate shock (p)", 0.0, 0.5, 0.05, 0.01)
+shock_frac = st.sidebar.slider("Shock severity (fractional drop in assets) s", 0.0, 0.9, 0.15, 0.01)
+
 # ----------------------------------------
 # Core KMV Calculations
 # ----------------------------------------
@@ -30,21 +36,30 @@ V = E + D  # Approximate asset value
 sigma_A = sigma_E * E / (E + D)
 DD = (np.log(V / D) + (r - 0.5 * sigma_A**2) * T) / (sigma_A * np.sqrt(T))
 
-# Standard KMV Normal PD
+# KMV Normal PD
 PD_normal = norm.cdf(-DD)
+
+# Climate-Adjusted KMV Normal PD
+sigma_A_shock = np.sqrt(sigma_A**2 + shock_frac**2)
+DD_shock_scaled = (np.log(V / D) + (r - 0.5 * sigma_A_shock**2) * T) / (sigma_A_shock * np.sqrt(T))
+PD_normal_climate = (1 - p_shock) * PD_normal + p_shock * norm.cdf(-DD_shock_scaled)
 
 # ----------------------------------------
 # Display Results
 # ----------------------------------------
 st.subheader("🧮 Default Probability Results")
-st.metric("KMV Normal PD", f"{PD_normal * 100:.6f}%")
+col1, col2 = st.columns(2)
+col1.metric("KMV Normal PD", f"{PD_normal * 100:.6f}%")
+col2.metric("Climate-Adjusted Normal PD", f"{PD_normal_climate * 100:.6f}%")
 
 st.write(f"**Estimated Asset Value (V):** {V:,.0f}")
 st.write(f"**Estimated Asset Volatility (σA):** {sigma_A:.4f}")
 st.write(f"**Distance to Default (DD):** {DD:.4f}")
+st.write(f"**Shock-Adjusted Distance to Default (DD_shock):** {DD_shock_scaled:.4f}")
+st.write(f"**Shock-Adjusted Volatility (σA_shock):** {sigma_A_shock:.4f}")
 
 # ----------------------------------------
-# Plot Normal CDF
+# Plot: KMV Normal CDF only
 # ----------------------------------------
 x_min = DD - 4
 x_max = DD + 4
@@ -92,6 +107,20 @@ with st.expander("📘 Formulas & Explanation"):
    \\[
    PD_{normal} = N(-DD)
    \\]
+
+5. **Climate-Adjusted Normal KMV**
+   - Scale volatility for shock:
+     \\[
+     \\sigma_{A,shock} = \\sqrt{\\sigma_A^2 + s^2}
+     \\]
+   - Compute shock-adjusted DD:
+     \\[
+     DD_{shock} = \\frac{\\ln(V_A / D) + (r - 0.5 \\sigma_{A,shock}^2)T}{\\sigma_{A,shock} \\sqrt{T}}
+     \\]
+   - Weighted average PD:
+     \\[
+     PD_{mix} = (1 - p) N(-DD) + p N(-DD_{shock})
+     \\]
 """)
 
 
