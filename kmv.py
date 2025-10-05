@@ -10,11 +10,11 @@ st.title("📉 KMV Default Probability Calculator with Climate Shock Adjustment"
 
 st.markdown("""
 This app calculates a company's **default probability** using the **KMV structural model** (Normal)
-and includes a **Climate-Risk Adjusted Normal KMV PD** (numerically only).
+and includes a **Climate-Risk Adjusted Normal KMV PD** (numeric only, visualized as horizontal line).
 """)
 
 # ----------------------------------------
-# User Inputs with Defaults
+# User Inputs
 # ----------------------------------------
 st.sidebar.header("Input Parameters")
 
@@ -36,10 +36,10 @@ V = E + D  # Approximate asset value
 sigma_A = sigma_E * E / (E + D)
 DD = (np.log(V / D) + (r - 0.5 * sigma_A**2) * T) / (sigma_A * np.sqrt(T))
 
-# KMV Normal PD
+# KMV Normal PD (decimal)
 PD_normal = norm.cdf(-DD)
 
-# Climate-Adjusted KMV Normal PD (numeric only)
+# Climate-Adjusted KMV Normal PD
 sigma_A_shock = np.sqrt(sigma_A**2 + shock_frac**2)
 DD_shock_scaled = (np.log(V / D) + (r - 0.5 * sigma_A_shock**2) * T) / (sigma_A_shock * np.sqrt(T))
 PD_normal_climate = (1 - p_shock) * PD_normal + p_shock * norm.cdf(-DD_shock_scaled)
@@ -61,9 +61,7 @@ st.write(f"**Shock-Adjusted Volatility (σA_shock):** {sigma_A_shock:.4f}")
 # ----------------------------------------
 # Plot: KMV Normal CDF only (decimal scale)
 # ----------------------------------------
-x_min = DD - 4
-x_max = DD + 4
-x = np.linspace(x_min, x_max, 500)
+x = np.linspace(DD - 4, DD + 4, 500)
 normal_cdf = norm.cdf(-x)
 
 fig, ax = plt.subplots(figsize=(10, 5))
@@ -72,13 +70,16 @@ ax.plot(x, normal_cdf, label="KMV Normal CDF")
 # Vertical line at DD
 ax.axvline(DD, color="red", linestyle=":", label=f"DD = {DD:.2f}")
 
-# Marker at DD for exact PD (in decimal, y-axis scale matches CDF)
+# Marker at DD for exact PD (decimal)
 ax.plot(DD, PD_normal, "ro", label=f"PD = {PD_normal*100:.6f}%")
+
+# Horizontal line for climate-adjusted PD
+ax.axhline(PD_normal_climate, color="purple", linestyle="--", label=f"Climate-Adjusted PD = {PD_normal_climate*100:.6f}%")
 
 ax.set_title("KMV Default Probability (Normal Model)")
 ax.set_xlabel("Distance to Default (DD)")
-ax.set_ylabel("Probability of Default")
-ax.set_ylim(0,1)
+ax.set_ylabel("Probability of Default (decimal scale)")
+ax.set_ylim(0, 1)
 ax.legend()
 ax.grid(True)
 st.pyplot(fig)
@@ -109,7 +110,7 @@ with st.expander("📘 Formulas & Explanation"):
    PD_{normal} = N(-DD)
    \\]
 
-5. **Climate-Adjusted Normal KMV** (numeric only)
+5. **Climate-Adjusted Normal KMV**
    - Scale volatility for shock:
      \\[
      \\sigma_{A,shock} = \\sqrt{\\sigma_A^2 + s^2}
@@ -123,9 +124,11 @@ with st.expander("📘 Formulas & Explanation"):
      PD_{mix} = (1 - p) N(-DD) + p N(-DD_{shock})
      \\]
 
-**Note:** Plot shows the **Normal KMV CDF** in decimal [0,1]. The red marker indicates the PD corresponding to the vertical DD line.
+**Note:**  
+- Plot shows **Normal KMV CDF** in decimal [0,1].  
+- Red vertical line = DD. Red marker = PD at DD.  
+- Purple dashed horizontal line = Climate-Adjusted PD (numeric, not full CDF).
 """)
-
 
 
 
