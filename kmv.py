@@ -18,8 +18,9 @@ and includes a **Climate-Risk Adjusted Normal KMV PD** (numeric only, visualized
 # ----------------------------------------
 st.sidebar.header("Input Parameters")
 
-E = st.sidebar.number_input("Market Value of Equity (E)", value=1e9, step=1e8, format="%.2e")
-D = st.sidebar.number_input("Book Value of Debt (D)", value=8e8, step=1e8, format="%.2e")
+# Default values set to produce KMV PD ~ 4–5%
+E = st.sidebar.number_input("Market Value of Equity (E)", value=1e8, step=1e7, format="%.2e")
+D = st.sidebar.number_input("Book Value of Debt (D)", value=8.5e7, step=1e7, format="%.2e")
 sigma_E = st.sidebar.number_input("Equity Volatility (σE)", value=0.44, step=0.01, format="%.2f")
 r = st.sidebar.number_input("Risk-Free Rate (r)", value=0.03, step=0.01, format="%.2f")
 T = st.sidebar.number_input("Time Horizon (T, years)", value=1.0, step=0.1, format="%.2f")
@@ -27,7 +28,7 @@ T = st.sidebar.number_input("Time Horizon (T, years)", value=1.0, step=0.1, form
 # Climate risk parameters
 st.sidebar.markdown("### 🌍 Climate Risk Parameters")
 p_shock = st.sidebar.slider("Probability of climate shock (p)", 0.0, 0.5, 0.05, 0.01)
-shock_frac = st.sidebar.slider("Shock severity (fractional drop in assets) s", 0.0, 0.9, 0.15, 0.01)
+shock_frac = st.sidebar.slider("Shock severity (fractional drop in assets) s", 0.0, 0.9, 0.05, 0.01)
 
 # ----------------------------------------
 # Core KMV Calculations
@@ -70,11 +71,11 @@ ax.plot(x, normal_cdf, label="KMV Normal CDF")
 # Vertical line at DD
 ax.axvline(DD, color="red", linestyle=":", label=f"DD = {DD:.2f}")
 
-# Marker at DD for exact PD (decimal)
-ax.plot(DD, PD_normal, "ro", label=f"PD = {PD_normal*100:.6f}%")
+# Marker at DD for exact PD
+ax.plot(DD, PD_normal, "ro", label=f"PD = {PD_normal*100:.3f}%")
 
 # Horizontal line for climate-adjusted PD
-ax.axhline(PD_normal_climate, color="purple", linestyle="--", label=f"Climate-Adjusted PD = {PD_normal_climate*100:.6f}%")
+ax.axhline(PD_normal_climate, color="purple", linestyle="--", label=f"Climate-Adjusted PD = {PD_normal_climate*100:.3f}%")
 
 ax.set_title("KMV Default Probability (Normal Model)")
 ax.set_xlabel("Distance to Default (DD)")
