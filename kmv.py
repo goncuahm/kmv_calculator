@@ -204,3 +204,132 @@ if st.button("Calculate"):
 
 st.markdown("---")
 st.markdown("**Notes:** This is an illustrative model. Climate risk is complex — consider scenario analysis, stress-testing, and empirical calibration (EDF mapping) for production use.")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# -------------------
+# Mathematical notes
+# -------------------
+st.markdown("---")
+with st.expander("📘 Mathematical Formulas and Model Notes"):
+    st.markdown(r"""
+### **1. Merton (KMV) Model Setup**
+
+The firm's **equity** is modeled as a **call option on its assets**:
+
+\[
+E = V \, N(d_1) - D \, e^{-rT} \, N(d_2)
+\]
+
+where:
+- \(E\): market value of equity (input)  
+- \(V\): market value of assets (estimated)  
+- \(D\): face value of debt (input)  
+- \(r\): risk-free rate (input)  
+- \(T\): time horizon (input)  
+- \(N(\cdot)\): standard normal CDF  
+
+---
+
+### **2. Asset Dynamics**
+
+Firm value follows a geometric Brownian motion:
+
+\[
+\frac{dV_t}{V_t} = \mu \, dt + \sigma_V \, dW_t
+\]
+
+where \( \mu \) is expected asset return and \( \sigma_V \) is asset volatility (estimated).
+
+---
+
+### **3. Option Parameters**
+
+\[
+d_1 = \frac{\ln(V/D) + (r + 0.5 \sigma_V^2)T}{\sigma_V \sqrt{T}}, 
+\quad
+d_2 = d_1 - \sigma_V \sqrt{T}
+\]
+
+---
+
+### **4. Relation Between Equity and Asset Volatility**
+
+\[
+\sigma_E = \frac{V N(d_1)}{E} \, \sigma_V
+\]
+
+This is used to solve for \(V\) and \(σ_V\) iteratively.
+
+---
+
+### **5. Distance to Default (DD)**
+
+\[
+DD = \frac{\ln(V/D) + (r - 0.5 \sigma_V^2)T}{\sigma_V \sqrt{T}}
+\]
+
+It represents how many standard deviations the firm’s asset value is away from the default point \(D\).
+
+---
+
+### **6. Probability of Default (PD)**
+
+**Baseline KMV:**
+\[
+PD_{\text{Normal}} = N(-DD)
+\]
+
+**Climate-adjusted (Student-t):**
+\[
+PD_t = F_t(-DD \sqrt{\tfrac{\nu}{\nu - 2}})
+\]
+where \(F_t(\cdot)\) is the CDF of the Student-t distribution with \(\nu\) degrees of freedom.
+
+**Climate-shock mixture:**
+\[
+PD_{\text{mix}} = (1 - p_{\text{shock}})PD_{\text{base}} + p_{\text{shock}}PD_{\text{shock}}
+\]
+where \(PD_{\text{shock}}\) is the PD after an adverse climate-induced asset shock.
+
+---
+
+### **7. Empirical EDF Mapping (KMV-style)**
+
+Empirically observed mapping from **Distance-to-Default** to **Expected Default Frequency**:
+
+\[
+EDF = f(DD)
+\]
+
+The function \(f(\cdot)\) is interpolated from empirical or vendor (e.g., Moody's KMV) calibration data.
+
+---
+
+### **8. Interpretation Summary**
+
+| Symbol | Meaning | Observed / Estimated |
+|:--|:--|:--|
+| \(E\) | Market value of equity | Observed |
+| \(σ_E\) | Equity volatility | Observed |
+| \(D\) | Debt value | Input |
+| \(V\) | **Estimated asset value** | Solved |
+| \(σ_V\) | **Estimated asset volatility** | Solved |
+| \(DD\) | Distance to default | Derived |
+| \(PD\) | Default probability | Derived |
+
+---
+
+These formulas form the basis of the **KMV default risk model** and its **climate-adjusted extensions**.
+    """)
