@@ -20,15 +20,15 @@ and volatility is scaled under extreme events.
 st.sidebar.header("Input Parameters")
 
 E = st.sidebar.number_input("Market Value of Equity (E)", value=1.0e8, step=1.0e7, format="%.2e")
-D = st.sidebar.number_input("Book Value of Debt (D)", value=9.0e7, step=1.0e7, format="%.2e")
+D = st.sidebar.number_input("Book Value of Debt (D)", value=9.5e7, step=1.0e7, format="%.2e")
 sigma_E = st.sidebar.number_input("Equity Volatility (σE)", value=0.6, step=0.01, format="%.2f")
-r = st.sidebar.number_input("Company Growth Rate/risk-free (r)", value=0.03, step=0.01, format="%.2f")
+r = st.sidebar.number_input("Risk-free rate (r)", value=0.03, step=0.01, format="%.2f")
 T = st.sidebar.number_input("Time Horizon (T, years)", value=1.0, step=0.1, format="%.2f")
 
 # Climate shock parameters
 st.sidebar.markdown("### 🌍 Climate Risk Parameters")
-p_shock = st.sidebar.slider("Probability of climate shock (p)", 0.0, 0.5, 0.05, 0.01)
-shock_frac = st.sidebar.slider("Shock severity (fractional drop in assets) s", 0.0, 0.9, 0.05, 0.01)
+p_shock = st.sidebar.slider("Probability of climate shock (p)", 0.0, 0.99, 0.05, 0.01)
+shock_frac = st.sidebar.slider("Shock severity (fractional drop in assets) s", 0.0, 0.99, 0.05, 0.01)
 
 # ----------------------------------------
 # Core KMV Calculations
