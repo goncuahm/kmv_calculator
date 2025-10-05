@@ -42,11 +42,13 @@ PD_normal = norm.cdf(-DD)
 # Climate-Adjusted KMV
 # Step 1: Reduce asset value
 V_shock = V * (1 - shock_frac)
-# Step 2: Scale volatility
-sigma_A_shock = np.sqrt(sigma_A**2 + shock_frac**2)
-# Step 3: Compute DD with new numerator and scaled volatility
-DD_shock = (np.log(V_shock / D) + (r - 0.5 * sigma_A_shock**2) * T) / (sigma_A_shock * np.sqrt(T))
-# Step 4: Weighted PD
+# Step 2: Scale volatility (smaller scaling to avoid denominator domination)
+sigma_A_shock = np.sqrt(sigma_A**2 + (shock_frac*0.5)**2)
+# Step 3: Compute DD with numerator and scaled volatility
+DD_shock_raw = (np.log(V_shock / D) + (r - 0.5 * sigma_A_shock**2) * T) / (sigma_A_shock * np.sqrt(T))
+# Step 4: Force DD negative if asset < debt (realistic)
+DD_shock = DD_shock_raw if V_shock > D else -abs(DD_shock_raw)
+# Step 5: Weighted PD
 PD_climate = (1 - p_shock) * PD_normal + p_shock * norm.cdf(-DD_shock)
 
 # ----------------------------------------
@@ -116,20 +118,21 @@ with st.expander("📘 Formulas & Explanation"):
   \\[
   V_{shock} = V (1 - s)
   \\]
-- Scale volatility:
+- Scale volatility (smaller factor to avoid denominator dominance):
   \\[
-  \\sigma_{A,shock} = \\sqrt{\\sigma_A^2 + s^2}
+  \\sigma_{A,shock} = \\sqrt{\\sigma_A^2 + (0.5 s)^2}
   \\]
-- Compute shock-adjusted distance to default:
+- Compute shock-adjusted DD:
   \\[
   DD_{shock} = \\frac{\\ln(V_{shock}/D) + (r - 0.5 \\sigma_{A,shock}^2) T}{\\sigma_{A,shock} \\sqrt{T}}
   \\]
-- Weighted PD with probability of shock:
+  - If assets < debt, enforce negative DD to reflect high risk
+- Weighted PD:
   \\[
   PD_{climate} = (1-p) PD_{normal} + p N(-DD_{shock})
   \\]
 
-**Note:** Now the climate shock **reduces assets and scales volatility**, giving realistic PD increases.
+This ensures **large asset drops yield realistic DD and PD values**.
 """)
 
 
