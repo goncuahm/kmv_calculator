@@ -19,7 +19,6 @@ and volatility is scaled under extreme events.
 # ----------------------------------------
 st.sidebar.header("Input Parameters")
 
-# Inputs chosen to give reasonable PD ~4–5% for demonstration
 E = st.sidebar.number_input("Market Value of Equity (E)", value=1.0e8, step=1.0e7, format="%.2e")
 D = st.sidebar.number_input("Book Value of Debt (D)", value=9.0e7, step=1.0e7, format="%.2e")
 sigma_E = st.sidebar.number_input("Equity Volatility (σE)", value=0.6, step=0.01, format="%.2f")
@@ -34,17 +33,20 @@ shock_frac = st.sidebar.slider("Shock severity (fractional drop in assets) s", 0
 # ----------------------------------------
 # Core KMV Calculations
 # ----------------------------------------
-V = E + D  # Approximate asset value
-sigma_A = sigma_E * E / (E + D)  # Asset volatility
+V = E + D
+sigma_A = sigma_E * E / (E + D)
 DD = (np.log(V / D) + (r - 0.5 * sigma_A**2) * T) / (sigma_A * np.sqrt(T))
 PD_normal = norm.cdf(-DD)
 
 # ----------------------------------------
-# Climate-Adjusted KMV (realistic)
-# V drops in numerator, volatility scaled
-V_shock = V * (1 - shock_frac)  # reduced asset value
-sigma_A_shock = np.sqrt(sigma_A**2 + (shock_frac)**2)  # scaled volatility
+# Climate-Adjusted KMV
+# Step 1: Reduce asset value
+V_shock = V * (1 - shock_frac)
+# Step 2: Scale volatility
+sigma_A_shock = np.sqrt(sigma_A**2 + shock_frac**2)
+# Step 3: Compute DD with new numerator and scaled volatility
 DD_shock = (np.log(V_shock / D) + (r - 0.5 * sigma_A_shock**2) * T) / (sigma_A_shock * np.sqrt(T))
+# Step 4: Weighted PD
 PD_climate = (1 - p_shock) * PD_normal + p_shock * norm.cdf(-DD_shock)
 
 # ----------------------------------------
@@ -63,21 +65,18 @@ st.write(f"**Shock-Adjusted Distance to Default (DD_shock):** {DD_shock:.4f}")
 st.write(f"**Shock-Adjusted Volatility (σA_shock):** {sigma_A_shock:.4f}")
 
 # ----------------------------------------
-# Plot KMV Normal CDF only
+# Plot Normal KMV CDF
 # ----------------------------------------
 x = np.linspace(DD - 4, DD + 4, 500)
 normal_cdf = norm.cdf(-x)
 
 fig, ax = plt.subplots(figsize=(10, 5))
 ax.plot(x, normal_cdf, label="KMV Normal CDF")
-
 # Vertical line at DD
 ax.axvline(DD, color="red", linestyle=":", label=f"DD = {DD:.2f}")
 ax.plot(DD, PD_normal, "ro", label=f"PD = {PD_normal*100:.3f}%")
-
 # Horizontal line for climate-adjusted PD
 ax.axhline(PD_climate, color="purple", linestyle="--", label=f"Climate-Adjusted PD = {PD_climate*100:.3f}%")
-
 ax.set_title("KMV Default Probability (Normal Model)")
 ax.set_xlabel("Distance to Default (DD)")
 ax.set_ylabel("Probability of Default (decimal scale)")
@@ -113,11 +112,11 @@ with st.expander("📘 Formulas & Explanation"):
    \\]
 
 ### Climate-Adjusted Normal KMV
-- Reduce assets to reflect climate shock:
+- Reduce asset value for shock:
   \\[
   V_{shock} = V (1 - s)
   \\]
-- Scale volatility for shock uncertainty:
+- Scale volatility:
   \\[
   \\sigma_{A,shock} = \\sqrt{\\sigma_A^2 + s^2}
   \\]
@@ -125,16 +124,12 @@ with st.expander("📘 Formulas & Explanation"):
   \\[
   DD_{shock} = \\frac{\\ln(V_{shock}/D) + (r - 0.5 \\sigma_{A,shock}^2) T}{\\sigma_{A,shock} \\sqrt{T}}
   \\]
-- Weighted PD using shock probability:
+- Weighted PD with probability of shock:
   \\[
   PD_{climate} = (1-p) PD_{normal} + p N(-DD_{shock})
   \\]
 
-**Note:**  
-- Plot shows **Normal KMV CDF only**.  
-- Red vertical line = DD; red marker = PD at DD.  
-- Purple horizontal line = Climate-Adjusted PD.  
-- Now a large drop in assets properly increases the default probability.
+**Note:** Now the climate shock **reduces assets and scales volatility**, giving realistic PD increases.
 """)
 
 
