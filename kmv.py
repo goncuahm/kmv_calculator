@@ -12,18 +12,18 @@ st.markdown("""
 This app calculates a company's **default probability** using the **KMV structural model** 
 and provides three estimates:
 1. **Standard KMV Normal Model**
-2. **Climate-Risk Adjusted (Mixture Shock Model)**
+2. **Climate-Risk Adjusted (Mixture Shock Model + volatility scaling)**
 3. **Moody’s KMV Empirical EDF Estimate**
 """)
-
+   
 # ----------------------------------------
 # User Inputs with Defaults
 # ----------------------------------------
 st.sidebar.header("Input Parameters")
 
-E = st.sidebar.number_input("Market Value of Equity (E)", value=1e9, step=1e8, format="%.2e")
-D = st.sidebar.number_input("Book Value of Debt (D)", value=8e8, step=1e8, format="%.2e")
-sigma_E = st.sidebar.number_input("Equity Volatility (σE)", value=0.44)
+E = st.sidebar.number_input("Market Value of Equity (E)", value=100, step=1e8, format="%.2e")
+D = st.sidebar.number_input("Book Value of Debt (D)", value=80, step=1e8, format="%.2e")
+sigma_E = st.sidebar.number_input("Equity Volatility (σE)", value=0.40)
 r = st.sidebar.number_input("Risk-Free Rate (r)", value=0.03)
 T = st.sidebar.number_input("Time Horizon (T, years)", value=1.0)
 
@@ -45,16 +45,26 @@ DD = (np.log(V / D) + (r - 0.5 * sigma_A**2) * T) / (sigma_A * np.sqrt(T))
 # 1️⃣ Standard KMV Probability
 PD_normal = norm.cdf(-DD)
 
-# 2️⃣ Climate Shock Mixture Adjustment
+# 2️⃣ Climate Shock Mixture Adjustment + volatility scaling
 DD_shock = DD + np.log(1 - shock_frac)
-PD_shock = norm.cdf(-DD_shock)
+sigma_A_shock = np.sqrt(sigma_A**2 + shock_frac**2)  # scaled volatility
+DD_shock_scaled = (np.log(V / D) + (r - 0.5 * sigma_A_shock**2) * T) / (sigma_A_shock * np.sqrt(T))
+PD_shock = norm.cdf(-DD_shock_scaled)
 PD_climate = (1 - p_shock) * PD_normal + p_shock * PD_shock
 
-# 3️⃣ Empirical EDF Approximation
-def empirical_edf(dd):
-    return 1 / (1 + np.exp(2.0 * dd)) * 0.5
+# 3️⃣ Empirical EDF Logistic Approximation
+def empirical_edf_logistic(DD, dd_points=[-8,-4,-2,0,2,4,8], edf_points=[0.999999,0.99,0.9,0.5,0.1,0.01,1e-6], eps=1e-9):
+    """
+    Fit logistic curve to empirical control points to ensure EDF -> 1 on left tail
+    """
+    edf_clamped = np.clip(edf_points, eps, 1 - eps)
+    logit_y = np.log(edf_clamped / (1 - edf_clamped))
+    a, b = np.polyfit(dd_points, logit_y, 1)
+    logit_at_DD = a * DD + b
+    edf_at_DD = 1.0 / (1.0 + np.exp(-logit_at_DD))
+    return float(np.clip(edf_at_DD, eps, 1.0 - eps))
 
-PD_empirical = empirical_edf(DD)
+PD_empirical = empirical_edf_logistic(DD)
 
 # ----------------------------------------
 # Display Results
@@ -68,7 +78,8 @@ col3.metric("KMV Empirical EDF", f"{PD_empirical * 100:.4f}%")
 st.write(f"**Estimated Asset Value (V):** {V:,.0f}")
 st.write(f"**Estimated Asset Volatility (σA):** {sigma_A:.4f}")
 st.write(f"**Distance to Default (DD):** {DD:.4f}")
-st.write(f"**Shock-Adjusted Distance to Default (DD_shock):** {DD_shock:.4f}")
+st.write(f"**Shock-Adjusted Distance to Default (DD_shock_scaled):** {DD_shock_scaled:.4f}")
+st.write(f"**Shock-Adjusted Volatility (σA_shock):** {sigma_A_shock:.4f}")
 
 # ----------------------------------------
 # Plot Comparison
@@ -76,12 +87,12 @@ st.write(f"**Shock-Adjusted Distance to Default (DD_shock):** {DD_shock:.4f}")
 x = np.linspace(-4, 6, 500)
 normal_cdf = norm.cdf(-x)
 shock_cdf = (1 - p_shock) * normal_cdf + p_shock * norm.cdf(-(x + np.log(1 - shock_frac)))
-empirical_curve = [empirical_edf(i) for i in x]
+empirical_curve = [empirical_edf_logistic(i) for i in x]
 
 fig, ax = plt.subplots(figsize=(10, 5))
 ax.plot(x, normal_cdf, label="KMV Normal Model")
 ax.plot(x, shock_cdf, "--", label=f"Mixture Shock Model (p={p_shock}, s={shock_frac})")
-ax.plot(x, empirical_curve, "--", color="orange", label="KMV Empirical EDF")
+ax.plot(x, empirical_curve, "--", color="orange", label="KMV Empirical EDF (logistic)")
 ax.axvline(DD, color="red", linestyle=":", label=f"DD = {DD:.2f}")
 ax.set_title("Comparison of Default Probability Models")
 ax.set_xlabel("Distance to Default (DD)")
@@ -115,22 +126,22 @@ st.markdown("""
    PD_{normal} = N(-DD)
    \\]
 
-5. **Climate-Adjusted (Mixture Model)**
+5. **Climate-Adjusted (Mixture Model + Volatility Scaling)**
    \\[
-   DD_{shock} = DD + \\ln(1 - s)
+   \\sigma_{A,shock} = \\sqrt{\\sigma_A^2 + s^2}
+   \\]
+   \\[
+   DD_{shock} = \\frac{\\ln(V_A / D) + (r - 0.5 \\sigma_{A,shock}^2)T}{\\sigma_{A,shock} \\sqrt{T}}
    \\]
    \\[
    PD_{mix} = (1 - p) N(-DD) + p N(-DD_{shock})
    \\]
 
-6. **KMV Empirical EDF**
+6. **KMV Empirical EDF (Logistic)**
    \\[
-   PD_{empirical} = \\frac{1}{1 + e^{2 \\times DD}} \\times 0.5
+   PD_{empirical} = \\frac{1}{1 + e^{-(a DD + b)}}
    \\]
 """)
-
-
-
 
 
 
