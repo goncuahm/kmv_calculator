@@ -80,31 +80,32 @@ st.write(f"**Shock-Adjusted Distance to Default (DD_shock_scaled):** {DD_shock_s
 st.write(f"**Shock-Adjusted Volatility (σA_shock):** {sigma_A_shock:.4f}")
 
 # ----------------------------------------
-# Density Plot Comparison (4 curves)
+# Corrected CDF Plot (4 curves)
 # ----------------------------------------
 x = np.linspace(-4, 6, 500)
 
-# Normal model densities
-normal_pdf = norm.pdf(x)
-shock_pdf = (1 - p_shock) * norm.pdf(x) + p_shock * norm.pdf(x + np.log(1 - shock_frac))
+# Normal model CDFs
+normal_cdf = norm.cdf(-x)
+shock_cdf = (1 - p_shock) * norm.cdf(-x) + p_shock * norm.cdf(- (x + np.log(1 - shock_frac)))
 
-# Empirical PDF approximation via numerical derivative
-empirical_pdf = np.gradient([empirical_edf(i) for i in x], x)
-empirical_climate_pdf = np.gradient([(1 - p_shock) * empirical_edf(i) + p_shock * empirical_edf(
+# Empirical CDFs
+empirical_curve = [empirical_edf(i) for i in x]
+empirical_climate_curve = [(1 - p_shock) * empirical_edf(i) + p_shock * empirical_edf(
     (np.log(V / D) + (r - 0.5 * sigma_A_shock**2) * T) / (sigma_A_shock * np.sqrt(T))
-) for i in x], x)
+) for i in x]
 
 fig, ax = plt.subplots(figsize=(10, 5))
-ax.plot(x, normal_pdf, label="KMV Normal Density")
-ax.plot(x, shock_pdf, "--", label=f"Normal + Climate Shock Density")
-ax.plot(x, empirical_pdf, "--", color="orange", label="KMV Empirical Density")
-ax.plot(x, empirical_climate_pdf, "--", color="green", label="Empirical + Climate Density")
+ax.plot(x, normal_cdf, label="KMV Normal CDF")
+ax.plot(x, shock_cdf, "--", label=f"Normal + Climate Shock CDF (p={p_shock}, s={shock_frac})")
+ax.plot(x, empirical_curve, "--", color="orange", label="KMV Empirical CDF")
+ax.plot(x, empirical_climate_curve, "--", color="green", label="Empirical + Climate CDF")
 ax.axvline(DD, color="red", linestyle=":", label=f"DD = {DD:.2f}")
-ax.set_title("Comparison of Default Probability Densities")
+ax.set_title("Comparison of Default Probability Models (CDF)")
 ax.set_xlabel("Distance to Default (DD)")
-ax.set_ylabel("Density")
+ax.set_ylabel("Probability of Default")
 ax.legend()
 st.pyplot(fig)
+
 
 
 # ----------------------------------------
