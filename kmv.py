@@ -59,7 +59,7 @@ st.write(f"**Shock-Adjusted Distance to Default (DD_shock):** {DD_shock_scaled:.
 st.write(f"**Shock-Adjusted Volatility (σA_shock):** {sigma_A_shock:.4f}")
 
 # ----------------------------------------
-# Plot: KMV Normal CDF only
+# Plot: KMV Normal CDF only (decimal scale)
 # ----------------------------------------
 x_min = DD - 4
 x_max = DD + 4
@@ -72,12 +72,13 @@ ax.plot(x, normal_cdf, label="KMV Normal CDF")
 # Vertical line at DD
 ax.axvline(DD, color="red", linestyle=":", label=f"DD = {DD:.2f}")
 
-# Marker at DD for exact PD (percentage)
+# Marker at DD for exact PD (in decimal, y-axis scale matches CDF)
 ax.plot(DD, PD_normal, "ro", label=f"PD = {PD_normal*100:.6f}%")
 
 ax.set_title("KMV Default Probability (Normal Model)")
 ax.set_xlabel("Distance to Default (DD)")
 ax.set_ylabel("Probability of Default")
+ax.set_ylim(0,1)
 ax.legend()
 ax.grid(True)
 st.pyplot(fig)
@@ -121,8 +122,9 @@ with st.expander("📘 Formulas & Explanation"):
      \\[
      PD_{mix} = (1 - p) N(-DD) + p N(-DD_{shock})
      \\]
-""")
 
+**Note:** Plot shows the **Normal KMV CDF** in decimal [0,1]. The red marker indicates the PD corresponding to the vertical DD line.
+""")
 
 
 
