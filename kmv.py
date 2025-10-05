@@ -79,12 +79,12 @@ st.write(f"**Distance to Default (DD):** {DD:.4f}")
 st.write(f"**Shock-Adjusted Distance to Default (DD_shock_scaled):** {DD_shock_scaled:.4f}")
 st.write(f"**Shock-Adjusted Volatility (σA_shock):** {sigma_A_shock:.4f}")
 
-# ----------------------------------------
-# Corrected CDF Plot (4 curves)
-# ----------------------------------------
-x = np.linspace(-4, 6, 500)
+# Auto-range around DD
+x_min = DD - 4
+x_max = DD + 4
+x = np.linspace(x_min, x_max, 500)
 
-# Normal model CDFs
+# Normal CDFs
 normal_cdf = norm.cdf(-x)
 shock_cdf = (1 - p_shock) * norm.cdf(-x) + p_shock * norm.cdf(- (x + np.log(1 - shock_frac)))
 
@@ -99,12 +99,17 @@ ax.plot(x, normal_cdf, label="KMV Normal CDF")
 ax.plot(x, shock_cdf, "--", label=f"Normal + Climate Shock CDF (p={p_shock}, s={shock_frac})")
 ax.plot(x, empirical_curve, "--", color="orange", label="KMV Empirical CDF")
 ax.plot(x, empirical_climate_curve, "--", color="green", label="Empirical + Climate CDF")
+
+# Distance to Default lines
 ax.axvline(DD, color="red", linestyle=":", label=f"DD = {DD:.2f}")
+ax.axvline(DD_shock_scaled, color="purple", linestyle=":", label=f"DD_shock = {DD_shock_scaled:.2f}")
+
 ax.set_title("Comparison of Default Probability Models (CDF)")
 ax.set_xlabel("Distance to Default (DD)")
 ax.set_ylabel("Probability of Default")
 ax.legend()
 st.pyplot(fig)
+
 
 
 
