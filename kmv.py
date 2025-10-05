@@ -10,10 +10,11 @@ st.title("📉 KMV Company Default Probability Calculator with Climate Shock Adj
 
 st.markdown("""
 This app calculates a company's **default probability** using the **KMV structural model** 
-and provides three estimates:
+and provides four estimates:
 1. **Standard KMV Normal Model**
-2. **Climate-Risk Adjusted (Mixture Shock Model + volatility scaling)**
-3. **KMV Empirical EDF Estimate (with climate adjustment)**
+2. **Climate-Risk Adjusted Normal Model**
+3. **KMV Empirical EDF**
+4. **KMV Empirical EDF with Climate Adjustment**
 """)
    
 # ----------------------------------------
@@ -46,19 +47,12 @@ DD = (np.log(V / D) + (r - 0.5 * sigma_A**2) * T) / (sigma_A * np.sqrt(T))
 PD_normal = norm.cdf(-DD)
 
 # 2️⃣ Climate Shock Mixture Adjustment + volatility scaling
-sigma_A_shock = np.sqrt(sigma_A**2 + shock_frac**2)  # scaled volatility
+sigma_A_shock = np.sqrt(sigma_A**2 + shock_frac**2)
 DD_shock_scaled = (np.log(V / D) + (r - 0.5 * sigma_A_shock**2) * T) / (sigma_A_shock * np.sqrt(T))
-PD_shock = norm.cdf(-DD_shock_scaled)
-PD_climate = (1 - p_shock) * PD_normal + p_shock * PD_shock
+PD_normal_climate = (1 - p_shock) * PD_normal + p_shock * norm.cdf(-DD_shock_scaled)
 
-# 3️⃣ KMV Empirical EDF (Previous method with extreme DD enforcement)
+# 3️⃣ KMV Empirical EDF
 def empirical_edf(dd):
-    """
-    Simple KMV empirical EDF with extreme DD enforcement:
-    - If DD < -20, PD = 1
-    - If DD > 20, PD = 0
-    - Otherwise, use previous sigmoid-like approximation
-    """
     if dd <= -20:
         return 1.0
     elif dd >= 20:
@@ -66,20 +60,18 @@ def empirical_edf(dd):
     else:
         return 1 / (1 + np.exp(2.0 * dd)) * 0.5
 
-# Empirical PD without shock
 PD_empirical = empirical_edf(DD)
-
-# Climate-adjusted Empirical PD using mixture approach
 PD_empirical_climate = (1 - p_shock) * empirical_edf(DD) + p_shock * empirical_edf(DD_shock_scaled)
 
 # ----------------------------------------
 # Display Results
 # ----------------------------------------
 st.subheader("🧮 Default Probability Results")
-col1, col2, col3 = st.columns(3)
+col1, col2, col3, col4 = st.columns(4)
 col1.metric("KMV Normal PD", f"{PD_normal * 100:.6f}%")
-col2.metric("Climate-Adjusted PD", f"{PD_climate * 100:.6f}%")
-col3.metric("Empirical PD (with climate adjustment)", f"{PD_empirical_climate * 100:.6f}%")
+col2.metric("Climate-Adjusted Normal PD", f"{PD_normal_climate * 100:.6f}%")
+col3.metric("KMV Empirical PD", f"{PD_empirical * 100:.6f}%")
+col4.metric("Empirical PD + Climate", f"{PD_empirical_climate * 100:.6f}%")
 
 st.write(f"**Estimated Asset Value (V):** {V:,.0f}")
 st.write(f"**Estimated Asset Volatility (σA):** {sigma_A:.4f}")
@@ -88,7 +80,7 @@ st.write(f"**Shock-Adjusted Distance to Default (DD_shock_scaled):** {DD_shock_s
 st.write(f"**Shock-Adjusted Volatility (σA_shock):** {sigma_A_shock:.4f}")
 
 # ----------------------------------------
-# Plot Comparison
+# Plot Comparison (4 curves)
 # ----------------------------------------
 x = np.linspace(-4, 6, 500)
 normal_cdf = norm.cdf(-x)
@@ -100,9 +92,9 @@ empirical_climate_curve = [(1 - p_shock) * empirical_edf(i) + p_shock * empirica
 
 fig, ax = plt.subplots(figsize=(10, 5))
 ax.plot(x, normal_cdf, label="KMV Normal Model")
-ax.plot(x, shock_cdf, "--", label=f"Mixture Shock Model (p={p_shock}, s={shock_frac})")
-ax.plot(x, empirical_curve, "--", color="orange", label="KMV Empirical EDF")
-ax.plot(x, empirical_climate_curve, "--", color="green", label="Empirical EDF + Climate")
+ax.plot(x, shock_cdf, "--", label=f"Normal + Climate Shock (p={p_shock}, s={shock_frac})")
+ax.plot(x, empirical_curve, "--", color="orange", label="KMV Empirical PD")
+ax.plot(x, empirical_climate_curve, "--", color="green", label="Empirical PD + Climate")
 ax.axvline(DD, color="red", linestyle=":", label=f"DD = {DD:.2f}")
 ax.set_title("Comparison of Default Probability Models")
 ax.set_xlabel("Distance to Default (DD)")
@@ -136,7 +128,7 @@ with st.expander("📘 Explanation and Formulas"):
    PD_{normal} = N(-DD)
    \\]
 
-5. **Climate-Adjusted Mixture Model**
+5. **Climate-Adjusted Normal KMV**
    - Scale volatility for shock:
      \\[
      \\sigma_{A,shock} = \\sqrt{\\sigma_A^2 + s^2}
@@ -166,10 +158,8 @@ with st.expander("📘 Explanation and Formulas"):
      PD_{empirical,climate} = (1-p) PD_{empirical}(DD) + p PD_{empirical}(DD_{shock})
      \\]
 
-This approach extends the mixture model logic from the normal KMV model to the empirical EDF, allowing climate shocks to increase the default probability realistically.
+This allows you to compare **four cases** side by side and visualize the effect of climate shocks on both the normal KMV model and the empirical PD.
 """)
-
-
 
 
 
