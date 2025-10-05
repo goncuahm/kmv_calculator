@@ -76,9 +76,9 @@ fig, ax = plt.subplots(figsize=(10, 5))
 ax.plot(x, normal_cdf, label="KMV Normal CDF")
 # Vertical line at DD
 ax.axvline(DD, color="red", linestyle=":", label=f"DD = {DD:.2f}")
-ax.plot(DD, PD_normal, "ro", label=f"PD = {PD_normal*100:.3f}%")
+ax.plot(DD, PD_normal, "ro", label=f"PD = {PD_normal*100:.2f}%")
 # Horizontal line for climate-adjusted PD
-ax.axhline(PD_climate, color="purple", linestyle="--", label=f"Climate-Adjusted PD = {PD_climate*100:.3f}%")
+ax.axhline(PD_climate, color="purple", linestyle="--", label=f"Climate-Adjusted PD = {PD_climate*100:.2f}%")
 ax.set_title("KMV Default Probability (Normal Model)")
 ax.set_xlabel("Distance to Default (DD)")
 ax.set_ylabel("Probability of Default (decimal scale)")
